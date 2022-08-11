@@ -1,11 +1,20 @@
 from django.shortcuts import render
-import .models
+from django.http import HttpResponse
+from django.db import transaction
+from rest_framework.viewsets import GenericViewSet
+from budget.models import *
+
+
+def index(request):
+    return HttpResponse("Hello, world. This is the budget")
+
+
 
 class PlaidLinkViewSet(GenericViewSet):
     @transaction.atomic()
     def create(self, request):
         public_token = request.data['public_token']
-        echange = plaid_client.Item.public_token.exchange(public_token)
+        exchange = plaid_client.Item.public_token.exchange(public_token)
         token, created = PlaidToken.objects.get_or_create(
             user=request.user,
             defaults={'access_token': echange['access_token']}
@@ -25,6 +34,6 @@ class TransactionsViewSet(GenericViewSet):
                 access_token=token.access_token,
                 start_date='today',
                 end_date='today',
-                account=ids=[request.query_params['account']]
+                account_ids=[request.query_params['account']]
             )
-        return Response(data={'content': plaid_resp['transactions']}
+        return Response(data={'content': plaid_resp['transactions']})
