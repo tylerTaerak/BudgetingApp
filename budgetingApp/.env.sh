@@ -1,0 +1,6 @@
+export PLAID_CLIENT_ID=62cc51c3822fa60013f43a47
+export PLAID_SECRET=2abfe2cfb49eadb08f5405de9a8488
+export PLAID_ENV=sandbox
+export PLAID_PRODUCTS=auth,transactions
+export PLAID_COUNTRY_CODES=US,CA
+export PLAID_REDIRECT_URI=https://tylerandmegan.com/oauth.html
