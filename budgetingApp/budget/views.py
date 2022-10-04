@@ -1,81 +1,97 @@
-from django.shortcuts import render
+
 from django.http import HttpResponse
-from django.db import transaction
+from django.shortcuts import render
 
-from rest_framework.viewsets import GenericViewSet
-import os
-
-from plaid import Client
+import plaid
+from plaid.model.auth_get_request import AuthGetRequest
+from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
+from plaid.model.transactions_sync_request import TransactionsSyncRequest
+from plaid.model.link_token_create_request import LinkTokenCreateRequest
+from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
 
 from budget.models import *
+import budget.utils as utils
 
 
-PLAID_CLIENT_ID = os.getenv('PLAID_CLIENT_ID')
-PLAID_PUBLIC_KEY = os.getenv('PLAID_PUBLIC_KEY')
-PLAID_SECRET = os.getenv('PLAID_SECRET')
-PLAID_ENV = os.getenv('PLAID_ENV', 'sandbox')
-
-
-def get_plaid_client():
-    return Client(
-            client_id = PLAID_CLIENT_ID,
-            secret = PLAID_SECRET,
-            public_key = PLAID_PUBLIC_KEY,
-            environment = PLAID_ENV
-            )
+plaid_client = utils.apiClient()
+access_token = None
 
 
 def index(request):
-    return render(request, 'index.html', {'plaid_public_key': PLAID_PUBLIC_KEY,
-                                            'plaid_environment': PLAID_ENV})
+    return render(request, 'index.html', {'plaid_public_key': utils.PLAID_PUBLIC_KEY,
+                                            'plaid_environment': utils.PLAID_ENV})
 
 
-def get_access_token(request):
+def getAccounts(request):
     global access_token
+    request = AuthGetRequest(access_token=access_token)
 
-    public = request.POST['public_token']
-    client = get_plaid_client()
-    exchange_response = client.Item.public_token.exchange(public)
-    access_token = exchange_response['access_token']
-
-    return JsonResponse(exchange_response)
-
-def set_access_token(request):
-    global access_token
-
-    access_token = request.POST('access_token')
-
-    return JsonResponse({'error': False})
-
-def accounts(request):
-    global access_token
-
-    client = get_plaid_client()
-    accounts = client.Auth.get(access_token)
+    global plaid_client
+    response = client.auth_get(request)
+    
+    accounts = response['accounts']
     return JsonResponse(accounts)
 
-def item(request):
+
+def getTransactions(request):
     global access_token
+    request = TransactionsSyncRequest(
+        access_token=access_token
+    )
 
-    client = get_plaid_client()
-    item_resp = client.Item.get(access_token)
-    inst_resp = client.Institutions.get_by_id(item_resp['item']['institution_id'])
-    return JsonResponse({'item': item_resp['item'],
-        'institution': inst_resp['institution']})
+    global plaid_client
+    response = plaid_client.transactions_sync(request)
+    transactions = response['transactions']
 
-def transactions(request):
+    while response['has_more']:
+        request = TransactionsSyncRequest(
+            access_token=access_token,
+            cursor=response['next_cursor']
+        )
+        response = client.transactions_sync(request)
+        transactions += response['transactions']
+
+    return JsonResponse(transactions)
+
+
+def exchangePublicToken(request):
+    exchangeReq = ItemPublicTokenExchangeRequest(
+        public_token=request['public_token']
+    )
+
+    global plaid_client
+    exchangeResp = plaid_client.item_public_token_exchange(exchangeReq)
+
     global access_token
+    access_token = exchangeResp['access_token']
 
-    client = get_plaid_client()
-    start_date = "{:%Y-%m-%d}".format(datetime.datetime.now() + datetime.timedelta(-30))
-    end_date = "{:%Y-%m-%d}".format(datetime.datetime.now())
-    resp = client.Transactions.get(access_token, start_date, end_date)
-    return JsonResponse(resp)
+    return JsonResponse(exchangeResp)
 
-def create_public_token(request):
-    global access_token
 
-    client = get_plaid_client()
-    resp = client.Item.public_token.create(access_token)
-    return JsonResponse(response)
+def startLink(request):
+    pass
+    response = "blah blah"
+    return exchangePublicToken(response)
 
+
+def getLinkToken(request):
+    request = LinkTokenCreateRequest(
+        products=[Products('auth'), Products('transactions')],
+        client_name="Conley Budgeting",
+        country_codes=[CountryCode('US')],
+        redirect_uri=utils.PLAID_URI,
+        language='en',
+        webhook='https://sample-webhook-uri.com',
+        link_customization_name='default',
+        user=LinkTokenCreateRequestUser(
+            client_user_id='123-test-user-id'
+        ),
+    )
+
+    # create link token
+    global plaid_client
+    response = client.link_token_create(request)
+    link_token = response['link_token']
+    
+    return startLink(response)
+    
