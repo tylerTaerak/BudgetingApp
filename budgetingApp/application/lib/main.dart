@@ -1,10 +1,19 @@
-import 'package:english_words/english_words.dart';
+import 'link.dart';
 import 'package:flutter/material.dart';
 
+void main() => runApp(const LinkPage());
+/*
+import 'package:english_words/english_words.dart';
+import 'package:flutter/material.dart';
+*/
+
+/*
 void main() {
   runApp(const MyApp());
 }
+  */
 
+/*
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -119,3 +128,4 @@ class _RandomWordsState extends State<RandomWords> {
     );
   }
 }
+  */

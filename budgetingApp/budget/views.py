@@ -1,4 +1,3 @@
-
 from django.http import HttpResponse
 from django.shortcuts import render
 
@@ -8,6 +7,8 @@ from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchan
 from plaid.model.transactions_sync_request import TransactionsSyncRequest
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
+from plaid.model.products import Products
+from plaid.model.country_code import CountryCode
 
 from budget.models import *
 import budget.utils as utils
@@ -68,30 +69,24 @@ def exchangePublicToken(request):
     return JsonResponse(exchangeResp)
 
 
-def startLink(request):
-    pass
-    response = "blah blah"
-    return exchangePublicToken(response)
-
-
 def getLinkToken(request):
     request = LinkTokenCreateRequest(
         products=[Products('auth'), Products('transactions')],
         client_name="Conley Budgeting",
         country_codes=[CountryCode('US')],
-        redirect_uri=utils.PLAID_URI,
+        redirect_uri="https://tylerandmegan.com/oauth.html",
         language='en',
         webhook='https://sample-webhook-uri.com',
         link_customization_name='default',
         user=LinkTokenCreateRequestUser(
-            client_user_id='123-test-user-id'
+            client_user_id=utils.PLAID_CLIENT_ID
         ),
     )
 
     # create link token
     global plaid_client
-    response = client.link_token_create(request)
+    response = plaid_client.link_token_create(request)
     link_token = response['link_token']
     
-    return startLink(response)
+    return JsonResponse(response)
     
