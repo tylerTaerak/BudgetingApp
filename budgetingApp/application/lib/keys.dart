@@ -30,8 +30,8 @@ class PubKey {
 }
 
 Future<LinkKey> fetchLinkKey() async {
-  final response = await http.get(
-    Uri.parse('http://localhost:8000/budget/link')
+  final response = await http.post(
+    Uri.parse('http://localhost:9090/budget/link')
   );
 
   if (response.statusCode == 200) {
@@ -42,8 +42,8 @@ Future<LinkKey> fetchLinkKey() async {
 }
 
 Future<PubKey> fetchPubKey() async {
-  final response = await http.get(
-    Uri.parse('http://localhost:8000/budget/link')
+  final response = await http.post(
+    Uri.parse('http://localhost:9090/budget/link')
   );
 
   if (response.statusCode == 200) {
