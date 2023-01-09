@@ -7,20 +7,23 @@ The budgeting application will:
 * Keep track of envelope system & warn when low (buckets for checking/spending)
 * Place money into buckets (for saving)
 
-Currently (as of 22.8.3), I only have the Plaid quickstart installed properly,
-which is just a simple showing-how of Plaid's software. I can probably use the code
-within to learn a little bit more of how Plaid works and how I can implement it 
-into my own web app, for me and Megan to use together for our various accounts.
+This is my next project on the chopping block. I really want to get this done as soon
+as I can (maybe just because I really don't like web development). Here are the steps
+I need to take in order to complete the project.
 
-A super great place to look at is [this github repo](https://github.com/ribab/plaid_django_example).
-It's a fully working Django backend with Plaid implemented, so it's right up the alley
-of which I wish to traverse
+#### Using Sandbox Mode
 
-However, it seems that the version of the Plaid API that this example app uses is extremely
-outdated (this site uses v4.0.0, but the current version is well over v9.0..). So I think it will
-need to be translated to the modern version of Plaid, so that I can actually use the api properly.
-But I think that may be left for another day...
+1. Get Plaid Link launching and configured properly
+2. Using link tokens, get checking and savings account info
+3. Using link tokens, get credit info
+4. Develop system for buckets (for savings) and envelopes (for spending)
+5. Develop system to display statistics (work with Megan to decide what's useful)
 
-I have decided to remove the quickstart app from this repo, since the above repo is much more
-applicable to the kind of application I would like to make.
+#### Using Development Mode
+
+6. Get working using our own accounts
+7. Figure out deployment for local wifi
+8. Figure out deployment for global networking
+
+COMPLETE!
 
