@@ -9,8 +9,8 @@ from plaid.model.recipient_bacs_nullable import RecipientBACSNullable
 from plaid.model.payment_initiation_address import PaymentInitiationAddress
 from plaid.model.payment_initiation_recipient_create_request import PaymentInitiationRecipientCreateRequest
 from plaid.model.payment_initiation_payment_create_request import PaymentInitiationPaymentCreateRequest
-from plaid.model.payment_initiation_payment_get_request import PaymentInitiationPaymentGetRequest 
-from plaid.model.link_token_create_request_payment_initiation import LinkTokenCreateRequestPaymentInitiation 
+from plaid.model.payment_initiation_payment_get_request import PaymentInitiationPaymentGetRequest
+from plaid.model.link_token_create_request_payment_initiation import LinkTokenCreateRequestPaymentInitiation
 from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
@@ -52,7 +52,7 @@ import datetime
 import json
 import time
 from dotenv import load_dotenv
-from werkzeug.wrappers import response 
+from werkzeug.wrappers import response
 load_dotenv()
 
 
@@ -145,7 +145,7 @@ def info():
     })
 
 
-@app.route('/budget/create_link', methods=['POST'])
+@app.route('/budget/create_link', methods=['GET'])
 def create_link_token_for_payment():
     global payment_id
     try:
@@ -175,11 +175,11 @@ def create_link_token_for_payment():
             request
         )
         pretty_print_response(response.to_dict())
-        
+
         # We store the payment_id in memory for demo purposes - in production, store it in a secure
         # persistent data store along with the Payment metadata, such as userId.
         payment_id = response['payment_id']
-        
+
         linkRequest = LinkTokenCreateRequest(
             # The 'payment_initiation' product has to be the only element in the 'products' list.
             products=[Products('payment_initiation')],
@@ -209,7 +209,8 @@ def create_link_token_for_payment():
         return json.loads(e.body)
 
 
-@app.route('/budget/link', methods=['POST'])
+# this fully works now
+@app.route('/budget/link', methods=['GET'])
 def create_link_token():
     try:
         request = LinkTokenCreateRequest(
@@ -229,6 +230,7 @@ def create_link_token():
 
     # create link token
         response = client.link_token_create(request)
+        print(response)
         return jsonify(response.to_dict())
     except plaid.ApiException as e:
         print(e)

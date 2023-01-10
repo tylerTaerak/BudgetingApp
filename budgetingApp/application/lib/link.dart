@@ -57,8 +57,10 @@ class _LinkPageState extends State<LinkPage> {
     }
   }
 
+// this fully works now
   Future<void> startLink() async {
     LinkKey key = await fetchLinkKey();
+    print(key.linkToken);
 
     _linkTokenConfiguration = LinkTokenConfiguration(token: key.linkToken);
 

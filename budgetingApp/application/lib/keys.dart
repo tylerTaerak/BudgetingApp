@@ -30,11 +30,12 @@ class PubKey {
 }
 
 Future<LinkKey> fetchLinkKey() async {
-  final response = await http.post(
+  final response = await http.get(
     Uri.parse('http://localhost:9090/budget/link')
   );
 
   if (response.statusCode == 200) {
+    print(response.body);
     return LinkKey.fromJson(jsonDecode(response.body));
   } else {
     throw Exception('Failed to retrieve link token');
@@ -42,11 +43,12 @@ Future<LinkKey> fetchLinkKey() async {
 }
 
 Future<PubKey> fetchPubKey() async {
-  final response = await http.post(
+  final response = await http.get(
     Uri.parse('http://localhost:9090/budget/link')
   );
 
   if (response.statusCode == 200) {
+    print(response.body);
     return PubKey.fromJson(jsonDecode(response.body));
   } else {
     throw Exception('Failed to retrieve link token');
