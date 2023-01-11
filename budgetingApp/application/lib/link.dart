@@ -42,29 +42,27 @@ class _LinkPageState extends State<LinkPage> {
   }
 
   void _onSuccessCallback(String publicToken, LinkSuccessMetadata metadata) {
-    print("onSuccess: $publicToken, metadata: ${metadata.description()}");
+    print("Link Success!");
   }
 
   void _onEventCallback(String event, LinkEventMetadata metadata) {
-    print("onEvent: $event, metadata: ${metadata.description()}");
+    print("Redirecting...");
   }
 
   void _onExitCallback(LinkError? error, LinkExitMetadata metadata) {
-    print("onExit metadata: ${metadata.description()}");
+    print("Exiting Link.");
 
     if (error != null) {
-      print("onExit error: ${error.description()}");
+      print("Exiting => error: ${error.description()}");
     }
   }
 
-// this fully works now
+// this fully works now; need to disable web security on startup
   Future<void> startLink() async {
     LinkKey key = await fetchLinkKey();
-    print(key.linkToken);
 
     _linkTokenConfiguration = LinkTokenConfiguration(token: key.linkToken);
 
-    print("opening Plaid....");
     PlaidLink.open(configuration: _linkTokenConfiguration);
   }
 

@@ -35,7 +35,6 @@ Future<LinkKey> fetchLinkKey() async {
   );
 
   if (response.statusCode == 200) {
-    print(response.body);
     return LinkKey.fromJson(jsonDecode(response.body));
   } else {
     throw Exception('Failed to retrieve link token');
@@ -48,7 +47,6 @@ Future<PubKey> fetchPubKey() async {
   );
 
   if (response.statusCode == 200) {
-    print(response.body);
     return PubKey.fromJson(jsonDecode(response.body));
   } else {
     throw Exception('Failed to retrieve link token');
