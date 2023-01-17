@@ -10,39 +10,25 @@ class LinkPage extends StatefulWidget {
 }
 
 class _LinkPageState extends State<LinkPage> {
-  late LegacyLinkConfiguration _publicKeyConfiguration;
   late LinkTokenConfiguration _linkTokenConfiguration;
 
   @override
   void initState() {
     super.initState();
 
-    _publicKeyConfiguration = LegacyLinkConfiguration(
-      clientName: "Conley Budgeting",
-      publicKey: "62cc51c3822fa60013f43a47",
-      environment: LinkEnvironment.sandbox,
-      products: <LinkProduct>[
-        LinkProduct.auth,
-        LinkProduct.transactions
-      ],
-      language: "en",
-      countryCodes: ['US'],
-      userLegalName: "John Appleseed",
-      userEmailAddress: "jappleseed@youapp.com",
-      userPhoneNumber: "+1 (512) 555-1234",
-    );
-
-    _linkTokenConfiguration = LinkTokenConfiguration(
-      token: "GENERATED TOKEN",
-    );
-
     PlaidLink.onSuccess(_onSuccessCallback);
     PlaidLink.onEvent(_onEventCallback);
     PlaidLink.onExit(_onExitCallback);
   }
 
-  void _onSuccessCallback(String publicToken, LinkSuccessMetadata metadata) {
+  void _onSuccessCallback(String publicToken, LinkSuccessMetadata metadata) async {
     print("Link Success!");
+    print(publicToken);
+
+    // make short notice saying the user has added an account
+    // now that we have a public key, we can exchange it for an access token
+
+    await exchangePubKey(publicToken);
   }
 
   void _onEventCallback(String event, LinkEventMetadata metadata) {
@@ -50,7 +36,7 @@ class _LinkPageState extends State<LinkPage> {
   }
 
   void _onExitCallback(LinkError? error, LinkExitMetadata metadata) {
-    print("Exiting Link.");
+    print("\n\nExiting Link.\n\n");
     // Here, we redirect to the home page
 
     if (error != null) {
@@ -77,11 +63,6 @@ class _LinkPageState extends State<LinkPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              ElevatedButton(
-                onPressed: () =>
-                    PlaidLink.open(configuration: _publicKeyConfiguration),
-                child: const Text("Open Plaid Link (Public Key)"),
-              ),
               const SizedBox(height: 15),
               ElevatedButton(
                 onPressed: () =>

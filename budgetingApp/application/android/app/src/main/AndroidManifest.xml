@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.budget_frontend">
+<uses-permission android:name="android.permission.INTERNET"/>
    <application
         android:label="budget_frontend"
         android:name="${applicationName}"
