@@ -283,7 +283,7 @@ def get_auth():
 # https://plaid.com/docs/#transactions
 
 
-@app.route('/api/transactions', methods=['GET'])
+@app.route('/budget/transactions', methods=['GET'])
 def get_transactions():
     # Set cursor to empty to receive all historical updates
     cursor = ''
@@ -343,7 +343,7 @@ def get_identity():
 # https://plaid.com/docs/#balance
 
 
-@app.route('/api/balance', methods=['GET'])
+@app.route('/budget/balances', methods=['GET'])
 def get_balance():
     try:
         request = AccountsBalanceGetRequest(
