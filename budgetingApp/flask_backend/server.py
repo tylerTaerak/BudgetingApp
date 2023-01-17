@@ -40,7 +40,6 @@ from plaid.model.transfer_create_idempotency_key import TransferCreateIdempotenc
 from plaid.model.transfer_user_address_in_request import TransferUserAddressInRequest
 from plaid.api import plaid_api
 from flask import Flask
-from flask import render_template
 from flask import request
 from flask import jsonify
 from datetime import datetime
@@ -48,11 +47,9 @@ from datetime import timedelta
 import plaid
 import base64
 import os
-import datetime
 import json
 import time
 from dotenv import load_dotenv
-from werkzeug.wrappers import response
 load_dotenv()
 
 
@@ -81,6 +78,7 @@ def empty_to_none(field):
     if value is None or len(value) == 0:
         return None
     return value
+
 
 host = plaid.Environment.Sandbox
 
@@ -119,9 +117,12 @@ for product in PLAID_PRODUCTS:
     products.append(Products(product))
 
 
-# We store the access_token in memory - in production, store it in a secure
-# persistent data store.
-access_token = None
+# Use local persistent storage to store access_tokens
+try:
+    with open('./.access_token', 'r') as handle:
+        access_token = handle.read()
+except FileNotFoundError:
+    access_token = None
 # The payment_id is only relevant for the UK Payment Initiation product.
 # We store the payment_id in memory - in production, store it in a secure
 # persistent data store.
@@ -145,77 +146,13 @@ def info():
     })
 
 
-@app.route('/budget/create_link', methods=['GET'])
-def create_link_token_for_payment():
-    global payment_id
-    try:
-        request = PaymentInitiationRecipientCreateRequest(
-            name='John Doe',
-            bacs=RecipientBACSNullable(account='26207729', sort_code='560029'),
-            address=PaymentInitiationAddress(
-                street=['street name 999'],
-                city='city',
-                postal_code='99999',
-                country='GB'
-            )
-        )
-        response = client.payment_initiation_recipient_create(
-            request)
-        recipient_id = response['recipient_id']
-
-        request = PaymentInitiationPaymentCreateRequest(
-            recipient_id=recipient_id,
-            reference='TestPayment',
-            amount=PaymentAmount(
-                PaymentAmountCurrency('GBP'),
-                value=100.00
-            )
-        )
-        response = client.payment_initiation_payment_create(
-            request
-        )
-        pretty_print_response(response.to_dict())
-
-        # We store the payment_id in memory for demo purposes - in production, store it in a secure
-        # persistent data store along with the Payment metadata, such as userId.
-        payment_id = response['payment_id']
-
-        linkRequest = LinkTokenCreateRequest(
-            # The 'payment_initiation' product has to be the only element in the 'products' list.
-            products=[Products('payment_initiation')],
-            client_name='Plaid Test',
-            # Institutions from all listed countries will be shown.
-            country_codes=list(map(lambda x: CountryCode(x), PLAID_COUNTRY_CODES)),
-            language='en',
-            user=LinkTokenCreateRequestUser(
-                # This should correspond to a unique id for the current user.
-                # Typically, this will be a user ID number from your application.
-                # Personally identifiable information, such as an email address or phone number, should not be used here.
-                client_user_id=str(time.time())
-            ),
-            payment_initiation=LinkTokenCreateRequestPaymentInitiation(
-                payment_id=payment_id
-            )
-        )
-
-        '''
-        if PLAID_REDIRECT_URI!=None:
-            linkRequest['redirect_uri']=PLAID_REDIRECT_URI
-        '''
-        linkResponse = client.link_token_create(linkRequest)
-        pretty_print_response(linkResponse.to_dict())
-        return jsonify(linkResponse.to_dict())
-    except plaid.ApiException as e:
-        return json.loads(e.body)
-
-
 # this fully works now
 @app.route('/budget/link', methods=['GET'])
 def create_link_token():
     try:
         request = LinkTokenCreateRequest(
             products=products,
-            client_name="Plaid Quickstart",
+            client_name="Conley Budgeting",
             country_codes=list(map(lambda x: CountryCode(x), PLAID_COUNTRY_CODES)),
             language='en',
             user=LinkTokenCreateRequestUser(
@@ -230,7 +167,6 @@ def create_link_token():
 
     # create link token
         response = client.link_token_create(request)
-        print(response)
         return jsonify(response.to_dict())
     except plaid.ApiException as e:
         print(e)
@@ -241,18 +177,25 @@ def create_link_token():
 # an API access_token
 # https://plaid.com/docs/#exchange-token-flow
 
-
-@app.route('/api/set_access_token', methods=['POST'])
+# this function works properly now; the rest should be fairly straightforward
+# since link was the hard part
+@app.route('/budget/exchange_tokens', methods=['POST'])
 def get_access_token():
+    request_data = request.get_json()  # convert to just json data
     global access_token
     global item_id
     global transfer_id
-    public_token = request.form['public_token']
+    public_token = request_data['public_token']
     try:
         exchange_request = ItemPublicTokenExchangeRequest(
             public_token=public_token)
         exchange_response = client.item_public_token_exchange(exchange_request)
         access_token = exchange_response['access_token']
+
+        # write newly retrieved access token to file
+        with open("./.access_token", "w") as handle:
+            handle.write(access_token)
+
         item_id = exchange_response['item_id']
         if 'transfer' in PLAID_PRODUCTS:
             transfer_id = authorize_and_create_transfer(access_token)
@@ -265,15 +208,15 @@ def get_access_token():
 # https://plaid.com/docs/#auth
 
 
-@app.route('/api/auth', methods=['GET'])
+@app.route('/budget/accounts', methods=['GET'])
 def get_auth():
     try:
-       request = AuthGetRequest(
+        request = AuthGetRequest(
             access_token=access_token
         )
-       response = client.auth_get(request)
-       pretty_print_response(response.to_dict())
-       return jsonify(response.to_dict())
+        response = client.auth_get(request)
+        pretty_print_response(response.to_dict())
+        return jsonify(response.to_dict())
     except plaid.ApiException as e:
         error_response = format_error(e)
         return jsonify(error_response)
@@ -291,7 +234,7 @@ def get_transactions():
     # New transaction updates since "cursor"
     added = []
     modified = []
-    removed = [] # Removed transaction ids
+    removed = []  # Removed transaction ids
     has_more = True
     try:
         # Iterate through each page of new transaction updates for item
@@ -311,7 +254,7 @@ def get_transactions():
             pretty_print_response(response)
 
         # Return the 8 most recent transactions
-        latest_transactions = sorted(added, key=lambda t: t['date'])[-8:]
+        latest_transactions = sorted(added, key=lambda t: t['date'])[-300:]
         return jsonify({
             'latest_transactions': latest_transactions})
 
@@ -360,7 +303,8 @@ def get_balance():
 # Retrieve an Item's accounts
 # https://plaid.com/docs/#accounts
 
-
+# this part is redundant with the Auth request
+"""
 @app.route('/api/accounts', methods=['GET'])
 def get_accounts():
     try:
@@ -373,6 +317,7 @@ def get_accounts():
     except plaid.ApiException as e:
         error_response = format_error(e)
         return jsonify(error_response)
+"""
 
 
 # Create and then retrieve an Asset Report for one or more Items. Note that an
