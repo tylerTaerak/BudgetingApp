@@ -51,6 +51,7 @@ class _LinkPageState extends State<LinkPage> {
 
   void _onExitCallback(LinkError? error, LinkExitMetadata metadata) {
     print("Exiting Link.");
+    // Here, we redirect to the home page
 
     if (error != null) {
       print("Exiting => error: ${error.description()}");
