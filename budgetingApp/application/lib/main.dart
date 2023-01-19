@@ -1,7 +1,8 @@
-import 'link.dart';
+//import 'link.dart';
+import 'home.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(const LinkPage());
+void main() => runApp(const HomePage());
 /*
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
@@ -86,7 +87,7 @@ class _RandomWordsState extends State<RandomWords> {
         actions: [
           IconButton(
             icon: const Icon(Icons.list),
-            onPressed: _pushSaved, 
+            onPressed: _pushSaved,
             tooltip: 'Saved Suggestions',
           )
         ],

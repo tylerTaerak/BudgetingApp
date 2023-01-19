@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'transactions.dart';
 
 class HomePage extends StatefulWidget {
     const HomePage({super.key});
@@ -9,13 +10,20 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
     @override
-    void initState() async {
+    void initState() {
         super.initState();
     }
 
     @override
     Widget build(BuildContext context) {
-        return const MaterialApp(
+        return MaterialApp(
+            home: Scaffold(
+                body: Container(
+                  width: double.infinity,
+                  color: Colors.grey[200],
+                  child: const TransactionTable()
+                )
+            )
         );
     }
 }

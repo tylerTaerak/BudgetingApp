@@ -6,7 +6,7 @@ class Transaction {
     final String name;
     final double amount;
     final String date;
-    final List<String> categories;
+    final List<dynamic> categories;
 
     Transaction({
         required this.name,
@@ -20,7 +20,7 @@ class Transaction {
             name: json['name'],
             amount: json['amount'],
             date: json['date'],
-            categories: json['category']
+            categories: json['category']!
         );
     }
 }
@@ -51,9 +51,13 @@ class TransactionTable extends StatefulWidget {
 }
 
 class _TransactionTableState extends State<TransactionTable> {
+    late Future<List<Transaction>> _transactionFuture;
+    late List<Transaction> _transactions;
     @override
     void initState() {
         super.initState();
+
+        _transactionFuture = transactions();
     }
 
     Future<List<Transaction>> transactions() async {
@@ -64,9 +68,38 @@ class _TransactionTableState extends State<TransactionTable> {
         return parseTransactions(response.body);
     }
 
+    // this part works just as intended; just need to add more info to ListTiles
     @override
     Widget build(BuildContext context) {
-        return Container();
+        return FutureBuilder<List<Transaction>> (
+            future: _transactionFuture,
+            builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                    _transactions = snapshot.data!;
+
+                    return ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemBuilder: (context, i) {
+                      if (i.isOdd) return const Divider();
+
+                      final index = i ~/ 2;
+                      Transaction t = _transactions[index];
+
+                      return ListTile(
+                        title: Text(
+                          "${t.name}    ${t.date}    ${t.amount}  ${t.categories[0]}"
+                        ),
+                      );
+                    },
+                  );
+                }
+                else if (snapshot.hasError) {
+                    return Text('${snapshot.error}');
+                }
+
+                return const CircularProgressIndicator();
+            }
+        );
     }
 }
 
