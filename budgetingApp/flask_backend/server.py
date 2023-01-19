@@ -251,7 +251,6 @@ def get_transactions():
             has_more = response['has_more']
             # Update cursor to the next cursor
             cursor = response['next_cursor']
-            pretty_print_response(response)
 
         # Return the 8 most recent transactions
         latest_transactions = sorted(added, key=lambda t: t['date'])[-300:]
@@ -303,7 +302,7 @@ def get_balance():
 # Retrieve an Item's accounts
 # https://plaid.com/docs/#accounts
 
-# this part is redundant with the Auth request
+# this part is (most likely) redundant with the Auth request
 """
 @app.route('/api/accounts', methods=['GET'])
 def get_accounts():
