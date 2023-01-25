@@ -135,15 +135,16 @@ transfer_id = None
 item_id = None
 
 
-@app.route('/api/info', methods=['POST'])
-def info():
-    global access_token
-    global item_id
-    return jsonify({
-        'item_id': item_id,
-        'access_token': access_token,
-        'products': PLAID_PRODUCTS
-    })
+def pretty_print_response(response):
+    print(json.dumps(response, indent=2, sort_keys=True, default=str))
+
+
+def format_error(e):
+    response = json.loads(e.body)
+    return {'error': {'status_code': e.status, 'display_message':
+                      response['error_message'],
+                      'error_code': response['error_code'],
+                      'error_type': response['error_type']}}
 
 
 # this fully works now
@@ -204,24 +205,6 @@ def get_access_token():
         return json.loads(e.body)
 
 
-# Retrieve ACH or ETF account numbers for an Item
-# https://plaid.com/docs/#auth
-
-
-@app.route('/budget/accounts', methods=['GET'])
-def get_auth():
-    try:
-        request = AuthGetRequest(
-            access_token=access_token
-        )
-        response = client.auth_get(request)
-        pretty_print_response(response.to_dict())
-        return jsonify(response.to_dict())
-    except plaid.ApiException as e:
-        error_response = format_error(e)
-        return jsonify(error_response)
-
-
 # Retrieve Transactions for an Item
 # https://plaid.com/docs/#transactions
 
@@ -262,6 +245,55 @@ def get_transactions():
         return jsonify(error_response)
 
 
+# Retrieve real-time balance data for each of an Item's accounts
+# https://plaid.com/docs/#balance
+
+
+@app.route('/budget/balances', methods=['GET'])
+def get_balance():
+    try:
+        request = AccountsBalanceGetRequest(
+            access_token=access_token
+        )
+        response = client.accounts_balance_get(request)
+        pretty_print_response(response.to_dict())
+        return jsonify(response.to_dict())
+    except plaid.ApiException as e:
+        error_response = format_error(e)
+        return jsonify(error_response)
+
+"""
+@app.route('/api/info', methods=['POST'])
+def info():
+    global access_token
+    global item_id
+    return jsonify({
+        'item_id': item_id,
+        'access_token': access_token,
+        'products': PLAID_PRODUCTS
+    })
+
+
+# Retrieve ACH or ETF account numbers for an Item
+# https://plaid.com/docs/#auth
+
+
+@app.route('/budget/accounts', methods=['GET'])
+def get_auth():
+    try:
+        request = AuthGetRequest(
+            access_token=access_token
+        )
+        response = client.auth_get(request)
+        pretty_print_response(response.to_dict())
+        return jsonify(response.to_dict())
+    except plaid.ApiException as e:
+        error_response = format_error(e)
+        return jsonify(error_response)
+
+
+
+
 # Retrieve Identity data for an Item
 # https://plaid.com/docs/#identity
 
@@ -281,22 +313,6 @@ def get_identity():
         return jsonify(error_response)
 
 
-# Retrieve real-time balance data for each of an Item's accounts
-# https://plaid.com/docs/#balance
-
-
-@app.route('/budget/balances', methods=['GET'])
-def get_balance():
-    try:
-        request = AccountsBalanceGetRequest(
-            access_token=access_token
-        )
-        response = client.accounts_balance_get(request)
-        pretty_print_response(response.to_dict())
-        return jsonify(response.to_dict())
-    except plaid.ApiException as e:
-        error_response = format_error(e)
-        return jsonify(error_response)
 
 
 # Retrieve an Item's accounts
@@ -491,13 +507,7 @@ def item():
         error_response = format_error(e)
         return jsonify(error_response)
 
-def pretty_print_response(response):
-  print(json.dumps(response, indent=2, sort_keys=True, default=str))
 
-def format_error(e):
-    response = json.loads(e.body)
-    return {'error': {'status_code': e.status, 'display_message':
-                      response['error_message'], 'error_code': response['error_code'], 'error_type': response['error_type']}}
 
 # This is a helper function to authorize and create a Transfer after successful
 # exchange of a public_token for an access_token. The transfer_id is then used
@@ -562,6 +572,7 @@ def authorize_and_create_transfer(access_token):
     except plaid.ApiException as e:
         error_response = format_error(e)
         return jsonify(error_response)
+"""
 
 
 if __name__ == '__main__':

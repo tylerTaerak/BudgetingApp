@@ -13,16 +13,16 @@ I need to take in order to complete the project.
 
 #### Using Sandbox Mode
 
-1. Get Plaid Link launching and configured properly
-2. Using link tokens, get checking and savings account info
-3. Using link tokens, get credit info
+1. ~~Get Plaid Link launching and configured properly~~
+2. ~~Using link tokens, get checking and savings account info~~
+3. ~~Using link tokens, get credit info~~
 4. Develop system for buckets (for savings) and envelopes (for spending)
 5. Develop system to display statistics (work with Megan to decide what's useful)
 
 #### Using Development Mode
 
 6. Get working using our own accounts
-7. Figure out deployment for local wifi
+7. Figure out deployment for local Wi-Fi.
 8. Figure out deployment for global networking
 
 COMPLETE!
