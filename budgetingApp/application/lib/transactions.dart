@@ -79,6 +79,7 @@ class _TransactionTableState extends State<TransactionTable> {
 
                     return ListView.builder(
                     padding: const EdgeInsets.all(16.0),
+                    itemCount: _transactions.length+1,
                     itemBuilder: (context, i) {
                       if (i.isOdd) return const Divider();
 
