@@ -7,13 +7,16 @@ just another name for saving/spending categories
 */
 
 List<Bucket> parseBuckets(String response, String type) {
+    print(response);
     final Map<String, dynamic> json = jsonDecode(response);
 
-    var bucketsJson = json['buckets'][type];
+    var bucketsJson = json['buckets'];
     List<Bucket> buckets = <Bucket>[];
 
     bucketsJson.forEach( (var bucket) => {
-        buckets.add(Bucket.fromJson(bucket))
+        if (bucket['type'] == type) {
+            buckets.add(Bucket.fromJson(bucket))
+        }
         });
 
     return buckets;
@@ -59,10 +62,17 @@ class Bucket {
     Bucket(this.name, this.type, this.currAmount, this.maxAmount);
 
     factory Bucket.fromJson(Map<String, dynamic> json) {
-        return Bucket(json['name'],
-        json['type'],
-        json['current'],
-        json['maximum']
+
+        if (json['type'] == 'spending') {
+            return SpendingBucket(json['name'], json['currAmount'], json['maxAmount']);
+        }
+        if (json['type'] == 'savings') {
+            return SavingsBucket(json['name'], json['currAmount'], json['maxAmount']);
+        }
+        return Bucket("Unknown",
+        'unknown',
+        0.00,
+        0.00
         );
     }
 }
@@ -133,16 +143,24 @@ class _BucketWidgetState extends State<BucketWidget> {
                             Bucket b = _buckets[index];
                             return ListTile(
                                 title: Text(b.name),
-                                subtitle: LinearProgressIndicator(
-                                    value: b.maxAmount / b.currAmount,
-                                    color: Colors.purple,
-                                    backgroundColor: Colors.white,
+                                trailing: CircularProgressIndicator(
+                                    value: b.currAmount / b.maxAmount,
+                                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.purple),
                                 )
+                                /*
+                                subtitle: LinearProgressIndicator(
+                                    value: b.currAmount / b.maxAmount,
+                                    color: Colors.purple,
+                                    backgroundColor: Colors.purple.withAlpha(50),
+                                )
+                                */
 
                             );
                         }
                     );
-
+                }
+                else if (snapshot.hasError) {
+                    return Text('${snapshot.error}');
                 }
                 return const CircularProgressIndicator();
             }
