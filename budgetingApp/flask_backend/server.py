@@ -1,51 +1,18 @@
 # source /Users/tnappy/node_projects/quickstart/python/bin/activate
 # Read env vars from .env file
-from plaid.exceptions import ApiException
-from plaid.model.payment_amount import PaymentAmount
-from plaid.model.payment_amount_currency import PaymentAmountCurrency
 from plaid.model.products import Products
 from plaid.model.country_code import CountryCode
-from plaid.model.recipient_bacs_nullable import RecipientBACSNullable
-from plaid.model.payment_initiation_address import PaymentInitiationAddress
-from plaid.model.payment_initiation_recipient_create_request import PaymentInitiationRecipientCreateRequest
-from plaid.model.payment_initiation_payment_create_request import PaymentInitiationPaymentCreateRequest
-from plaid.model.payment_initiation_payment_get_request import PaymentInitiationPaymentGetRequest
-from plaid.model.link_token_create_request_payment_initiation import LinkTokenCreateRequestPaymentInitiation
 from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
-from plaid.model.asset_report_create_request import AssetReportCreateRequest
-from plaid.model.asset_report_create_request_options import AssetReportCreateRequestOptions
-from plaid.model.asset_report_user import AssetReportUser
-from plaid.model.asset_report_get_request import AssetReportGetRequest
-from plaid.model.asset_report_pdf_get_request import AssetReportPDFGetRequest
-from plaid.model.auth_get_request import AuthGetRequest
 from plaid.model.transactions_sync_request import TransactionsSyncRequest
-from plaid.model.identity_get_request import IdentityGetRequest
-from plaid.model.investments_transactions_get_request_options import InvestmentsTransactionsGetRequestOptions
-from plaid.model.investments_transactions_get_request import InvestmentsTransactionsGetRequest
 from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
 from plaid.model.accounts_get_request import AccountsGetRequest
-from plaid.model.investments_holdings_get_request import InvestmentsHoldingsGetRequest
-from plaid.model.item_get_request import ItemGetRequest
-from plaid.model.institutions_get_by_id_request import InstitutionsGetByIdRequest
-from plaid.model.transfer_authorization_create_request import TransferAuthorizationCreateRequest
-from plaid.model.transfer_create_request import TransferCreateRequest
-from plaid.model.transfer_get_request import TransferGetRequest
-from plaid.model.transfer_network import TransferNetwork
-from plaid.model.transfer_type import TransferType
-from plaid.model.transfer_user_in_request import TransferUserInRequest
-from plaid.model.ach_class import ACHClass
-from plaid.model.transfer_create_idempotency_key import TransferCreateIdempotencyKey
-from plaid.model.transfer_user_address_in_request import TransferUserAddressInRequest
 from plaid.api import plaid_api
 from flask import Flask
 from flask import request
 from flask import jsonify
-from datetime import datetime
-from datetime import timedelta
 import plaid
-import base64
 import os
 import json
 import time
@@ -123,6 +90,25 @@ try:
         access_token = handle.read()
 except FileNotFoundError:
     access_token = None
+
+
+# no database this time around; save buckets to file regularly,
+# load on startup in system memory
+try:
+    with open('./buckets.json', 'r') as handle:
+        buckets = json.load(handle)
+        buckets = buckets['buckets']
+except FileNotFoundError:
+    buckets = [{"name": "Food & Drink", "type": "spending", "maxAmount": "100.00", "currAmount": "56.50"}]
+
+
+# function to write bucket objects to file
+def write_buckets_to_file():
+    bucket_obj = json.dumps(buckets, indent=2)
+    with open('./buckets.json', 'w') as handle:
+        handle.write(bucket_obj)
+
+
 # The payment_id is only relevant for the UK Payment Initiation product.
 # We store the payment_id in memory - in production, store it in a secure
 # persistent data store.
@@ -198,8 +184,6 @@ def get_access_token():
             handle.write(access_token)
 
         item_id = exchange_response['item_id']
-        if 'transfer' in PLAID_PRODUCTS:
-            transfer_id = authorize_and_create_transfer(access_token)
         return jsonify(exchange_response.to_dict())
     except plaid.ApiException as e:
         return json.loads(e.body)
@@ -262,6 +246,87 @@ def get_balance():
         error_response = format_error(e)
         return jsonify(error_response)
 
+
+@app.route('/budget/add_bucket', methods=['POST'])
+def add_bucket(request):
+    pretty_print_response(request.body)
+    buckets['type'].append(request.body)
+
+
+@app.route('/budget/get_buckets', methods=['GET'])
+def get_buckets():
+    print("we made it this far baby!")
+    return jsonify(buckets)
+
+
+"""
+
+# This is a helper function to authorize and create a Transfer after successful
+# exchange of a public_token for an access_token. The transfer_id is then used
+# to obtain the data about that particular Transfer.
+def authorize_and_create_transfer(access_token):
+    try:
+        # We call /accounts/get to obtain first account_id - in production,
+        # account_id's should be persisted in a data store and retrieved
+        # from there.
+        request = AccountsGetRequest(access_token=access_token)
+        response = client.accounts_get(request)
+        account_id = response['accounts'][0]['account_id']
+
+        request = TransferAuthorizationCreateRequest(
+            access_token=access_token,
+            account_id=account_id,
+            type=TransferType('credit'),
+            network=TransferNetwork('ach'),
+            amount='1.34',
+            ach_class=ACHClass('ppd'),
+            user=TransferUserInRequest(
+                legal_name='FirstName LastName',
+                email_address='foobar@email.com',
+                address=TransferUserAddressInRequest(
+                    street='123 Main St.',
+                    city='San Francisco',
+                    region='CA',
+                    postal_code='94053',
+                    country='US'
+                ),
+            ),
+        )
+        response = client.transfer_authorization_create(request)
+        pretty_print_response(response)
+        authorization_id = response['authorization']['id']
+
+        request = TransferCreateRequest(
+            idempotency_key=TransferCreateIdempotencyKey('1223abc456xyz7890001'),
+            access_token=access_token,
+            account_id=account_id,
+            authorization_id=authorization_id,
+            type=TransferType('credit'),
+            network=TransferNetwork('ach'),
+            amount='1.34',
+            description='Payment',
+            ach_class=ACHClass('ppd'),
+            user=TransferUserInRequest(
+                legal_name='FirstName LastName',
+                email_address='foobar@email.com',
+                address=TransferUserAddressInRequest(
+                    street='123 Main St.',
+                    city='San Francisco',
+                    region='CA',
+                    postal_code='94053',
+                    country='US'
+                ),
+            ),
+        )
+        response = client.transfer_create(request)
+        pretty_print_response(response)
+        return response['transfer']['id']
+    except plaid.ApiException as e:
+        error_response = format_error(e)
+        return jsonify(error_response)
+"""
+
+
 """
 @app.route('/api/info', methods=['POST'])
 def info():
@@ -320,6 +385,8 @@ def get_identity():
 
 # this part is (most likely) redundant with the Auth request
 """
+
+
 @app.route('/api/accounts', methods=['GET'])
 def get_accounts():
     try:
@@ -332,9 +399,9 @@ def get_accounts():
     except plaid.ApiException as e:
         error_response = format_error(e)
         return jsonify(error_response)
+
+
 """
-
-
 # Create and then retrieve an Asset Report for one or more Items. Note that an
 # Asset Report can contain up to 100 items, but for simplicity we're only
 # including one Item here.
@@ -509,69 +576,6 @@ def item():
 
 
 
-# This is a helper function to authorize and create a Transfer after successful
-# exchange of a public_token for an access_token. The transfer_id is then used
-# to obtain the data about that particular Transfer.
-def authorize_and_create_transfer(access_token):
-    try:
-        # We call /accounts/get to obtain first account_id - in production,
-        # account_id's should be persisted in a data store and retrieved
-        # from there.
-        request = AccountsGetRequest(access_token=access_token)
-        response = client.accounts_get(request)
-        account_id = response['accounts'][0]['account_id']
-
-        request = TransferAuthorizationCreateRequest(
-            access_token=access_token,
-            account_id=account_id,
-            type=TransferType('credit'),
-            network=TransferNetwork('ach'),
-            amount='1.34',
-            ach_class=ACHClass('ppd'),
-            user=TransferUserInRequest(
-                legal_name='FirstName LastName',
-                email_address='foobar@email.com',
-                address=TransferUserAddressInRequest(
-                    street='123 Main St.',
-                    city='San Francisco',
-                    region='CA',
-                    postal_code='94053',
-                    country='US'
-                ),
-            ),
-        )
-        response = client.transfer_authorization_create(request)
-        pretty_print_response(response)
-        authorization_id = response['authorization']['id']
-
-        request = TransferCreateRequest(
-            idempotency_key=TransferCreateIdempotencyKey('1223abc456xyz7890001'),
-            access_token=access_token,
-            account_id=account_id,
-            authorization_id=authorization_id,
-            type=TransferType('credit'),
-            network=TransferNetwork('ach'),
-            amount='1.34',
-            description='Payment',
-            ach_class=ACHClass('ppd'),
-            user=TransferUserInRequest(
-                legal_name='FirstName LastName',
-                email_address='foobar@email.com',
-                address=TransferUserAddressInRequest(
-                    street='123 Main St.',
-                    city='San Francisco',
-                    region='CA',
-                    postal_code='94053',
-                    country='US'
-                ),
-            ),
-        )
-        response = client.transfer_create(request)
-        pretty_print_response(response)
-        return response['transfer']['id']
-    except plaid.ApiException as e:
-        error_response = format_error(e)
-        return jsonify(error_response)
 """
 
 
