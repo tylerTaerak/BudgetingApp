@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'buckets.dart';
 import 'transactions.dart';
 import 'balances.dart';
 
@@ -12,7 +13,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
     int _pageIndex = 0;
     static const List<Widget> _pages = <Widget>[
-        Text("Home Page"),
+        BucketWidget(type: "spending"),
         TransactionTable(),
         BalanceWidget(),
     ];
