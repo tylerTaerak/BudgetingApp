@@ -109,20 +109,12 @@ def write_buckets_to_file():
         handle.write(bucket_obj)
 
 
-# The payment_id is only relevant for the UK Payment Initiation product.
-# We store the payment_id in memory - in production, store it in a secure
-# persistent data store.
-payment_id = None
-# The transfer_id is only relevant for Transfer ACH product.
-# We store the transfer_id in memomory - in produciton, store it in a secure
-# persistent data store
-transfer_id = None
-
-item_id = None
-
-
+# this is just a helper function, commenting out for now, once the app is
+# finished delete completely
+"""
 def pretty_print_response(response):
     print(json.dumps(response, indent=2, sort_keys=True, default=str))
+"""
 
 
 def format_error(e):
@@ -131,6 +123,17 @@ def format_error(e):
                       response['error_message'],
                       'error_code': response['error_code'],
                       'error_type': response['error_type']}}
+
+
+@app.route('/budget/get_all_info', methods=['GET'])
+def get_info():
+    # here, put everything together into one big json
+    # (transactions, balances, buckets)
+    # We will need to perform actual calculations as well
+    # cause we need to alter buckets to be linked to the
+    # related transactions and calculate the amount in the
+    # bucket
+    pass
 
 
 # this fully works now
@@ -192,8 +195,6 @@ def get_access_token():
 
 # Retrieve Transactions for an Item
 # https://plaid.com/docs/#transactions
-
-
 @app.route('/budget/transactions', methods=['GET'])
 def get_transactions():
     # Set cursor to empty to receive all historical updates
@@ -232,8 +233,6 @@ def get_transactions():
 
 # Retrieve real-time balance data for each of an Item's accounts
 # https://plaid.com/docs/#balance
-
-
 @app.route('/budget/balances', methods=['GET'])
 def get_balance():
     try:
@@ -241,7 +240,6 @@ def get_balance():
             access_token=access_token
         )
         response = client.accounts_balance_get(request)
-        pretty_print_response(response.to_dict())
         return jsonify(response.to_dict())
     except plaid.ApiException as e:
         error_response = format_error(e)
@@ -250,7 +248,6 @@ def get_balance():
 
 @app.route('/budget/add_bucket', methods=['POST'])
 def add_bucket(request):
-    pretty_print_response(request.body)
     buckets['type'].append(request.body)
 
 
