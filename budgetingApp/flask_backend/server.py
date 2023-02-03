@@ -6,19 +6,20 @@ from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchan
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
 from plaid.model.transactions_sync_request import TransactionsSyncRequest
+from plaid.model.transactions_get_request import TransactionsGetRequest
+from plaid.model.transactions_get_request_options import TransactionsGetRequestOptions
 from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
 from plaid.api import plaid_api
 from flask import Flask
 from flask import request
 from flask import jsonify
+import datetime
 import plaid
 import os
 import json
 import time
 from dotenv import load_dotenv
 load_dotenv()
-
-
 app = Flask(__name__)
 
 # Fill in your Plaid API keys - https://dashboard.plaid.com/account/keys
@@ -98,8 +99,9 @@ try:
         buckets = json.load(handle)
         buckets = buckets['buckets']
 except FileNotFoundError:
-    buckets = [{"name": "Food & Drink", "type": "spending",
-                "maxAmount": 100.00, "currAmount": 56.50}]
+    buckets = {"spending": [{"name": "Travel", "type": "spending",
+                    "maxAmount": 100.00, "currAmount": 56.50,
+                    "transactions": []}]}
 
 
 # function to write bucket objects to file
@@ -111,10 +113,8 @@ def write_buckets_to_file():
 
 # this is just a helper function, commenting out for now, once the app is
 # finished delete completely
-"""
 def pretty_print_response(response):
     print(json.dumps(response, indent=2, sort_keys=True, default=str))
-"""
 
 
 def format_error(e):
@@ -133,64 +133,60 @@ def get_info():
     # cause we need to alter buckets to be linked to the
     # related transactions and calculate the amount in the
     # bucket
-    pass
-
-
-# this fully works now
-@app.route('/budget/link', methods=['GET'])
-def create_link_token():
+    response = dict()
+    transactions = None  # we're gonna be working with these later
     try:
-        request = LinkTokenCreateRequest(
-            products=products,
-            client_name="Conley Budgeting",
-            country_codes=list(map(lambda x:
-                                   CountryCode(x), PLAID_COUNTRY_CODES)),
-            language='en',
-            user=LinkTokenCreateRequestUser(
-                client_user_id=str(time.time())
-            )
-        )
-        '''
-        if PLAID_REDIRECT_URI!=None:
-            print(PLAID_REDIRECT_URI)
-            request['redirect_uri']=PLAID_REDIRECT_URI
-        '''
+        # do transaction request stuff with Plaid API
+        today = datetime.date.today()
+        today = datetime.date(year=2021, month=1, day=31)
+        transactions = TransactionsGetRequest(
+                access_token=access_token,
+                start_date=today.replace(day=1),
+                end_date=today,
+                options=TransactionsGetRequestOptions(
+                    include_personal_finance_category=True
+                    )
+                )
+        transactions = client.transactions_get(transactions).to_dict()
+        response['transactions'] = transactions['transactions']
+        transactions = transactions['transactions']
+        response['transactions'] = transactions
 
-    # create link token
-        response = client.link_token_create(request)
-        return jsonify(response.to_dict())
+        # do balance request stuff with Plaid API
+        balanceRequest = AccountsBalanceGetRequest(
+                access_token=access_token
+                )
+
+        balances = client.accounts_balance_get(balanceRequest)
+        response['balances'] = balances.to_dict()
+
     except plaid.ApiException as e:
-        print(e)
-        return json.loads(e.body)
+        error_response = format_error(e)
+        return jsonify(error_response)
+
+    for bucket in buckets['spending']:
+        local_transactions = [t for t in transactions if t['category'] == bucket['name']]
+        bucket['currAmount'] = 0
+        bucket['transactions'] = []
+
+        for t in local_transactions:
+            bucket['currAmount'] += t['amount']
+            bucket['transactions'].append(t)
+
+    response['buckets'] = buckets
+
+    pretty_print_response(response)
+
+    return jsonify(response)
 
 
-# Exchange token flow - exchange a Link public_token for
-# an API access_token
-# https://plaid.com/docs/#exchange-token-flow
-
-# this function works properly now; the rest should be fairly straightforward
-# since link was the hard part
-@app.route('/budget/exchange_tokens', methods=['POST'])
-def get_access_token():
-    request_data = request.get_json()  # convert to just json data
-    global access_token
-    global item_id
-    global transfer_id
-    public_token = request_data['public_token']
-    try:
-        exchange_request = ItemPublicTokenExchangeRequest(
-            public_token=public_token)
-        exchange_response = client.item_public_token_exchange(exchange_request)
-        access_token = exchange_response['access_token']
-
-        # write newly retrieved access token to file
-        with open("./.access_token", "w") as handle:
-            handle.write(access_token)
-
-        item_id = exchange_response['item_id']
-        return jsonify(exchange_response.to_dict())
-    except plaid.ApiException as e:
-        return json.loads(e.body)
+"""
+<section>
+This section has all the primary functions used to interface with
+the Plaid API; will likely just be completely written out by utilizing
+a function that has all the information together instead of separating
+them
+"""
 
 
 # Retrieve Transactions for an Item
@@ -255,6 +251,72 @@ def add_bucket(request):
 def get_buckets():
     bucketJson = {'buckets': buckets}
     return jsonify(bucketJson)
+
+
+"""
+<section>
+This section has all of the calls required to get a link token and exchange it
+for a full access token
+"""
+
+
+@app.route('/budget/link', methods=['GET'])
+def create_link_token():
+    try:
+        request = LinkTokenCreateRequest(
+            products=products,
+            client_name="Conley Budgeting",
+            country_codes=list(map(lambda x:
+                                   CountryCode(x), PLAID_COUNTRY_CODES)),
+            language='en',
+            user=LinkTokenCreateRequestUser(
+                client_user_id=str(time.time())
+            )
+        )
+        '''
+        if PLAID_REDIRECT_URI!=None:
+            print(PLAID_REDIRECT_URI)
+            request['redirect_uri']=PLAID_REDIRECT_URI
+        '''
+
+    # create link token
+        response = client.link_token_create(request)
+        return jsonify(response.to_dict())
+    except plaid.ApiException as e:
+        print(e)
+        return json.loads(e.body)
+
+
+# Exchange token flow - exchange a Link public_token for
+# an API access_token
+# https://plaid.com/docs/#exchange-token-flow
+
+@app.route('/budget/exchange_tokens', methods=['POST'])
+def get_access_token():
+    request_data = request.get_json()  # convert to just json data
+    global access_token
+    global item_id
+    global transfer_id
+    public_token = request_data['public_token']
+    try:
+        exchange_request = ItemPublicTokenExchangeRequest(
+            public_token=public_token)
+        exchange_response = client.item_public_token_exchange(exchange_request)
+        access_token = exchange_response['access_token']
+
+        # write newly retrieved access token to file
+        with open("./.access_token", "w") as handle:
+            handle.write(access_token)
+
+        item_id = exchange_response['item_id']
+        return jsonify(exchange_response.to_dict())
+    except plaid.ApiException as e:
+        return json.loads(e.body)
+
+
+"""
+</section>
+"""
 
 
 if __name__ == '__main__':
