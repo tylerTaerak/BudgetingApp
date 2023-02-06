@@ -100,8 +100,8 @@ try:
         buckets = buckets['buckets']
 except FileNotFoundError:
     buckets = {"spending": [{"name": "Other", "type": "spending",
-                    "maxAmount": 0.00, "currAmount": 0.00,
-                    "transactions": []}]}
+                             "maxAmount": 0.00, "currAmount": 0.00,
+                             "transactions": []}]}
 
 
 # function to write bucket objects to file
@@ -125,20 +125,22 @@ def format_error(e):
                       'error_type': response['error_type']}}
 
 
+# This is the main function for the backend, where it collects
+# all of the required information for the application and sends
+# it. It is largely adapted from the Plaid API quickstart project
+# code.
 @app.route('/budget/get_all_info', methods=['GET'])
 def get_info():
-    # here, put everything together into one big json
-    # (transactions, balances, buckets)
-    # We will need to perform actual calculations as well
-    # cause we need to alter buckets to be linked to the
-    # related transactions and calculate the amount in the
-    # bucket
+
     response = dict()
     transactions = None  # we're gonna be working with these later
+
     try:
         # do transaction request stuff with Plaid API
+
+        # get transactions for the current month
         today = datetime.date.today()
-        today = datetime.date(year=2021, month=1, day=31)
+
         transactions = TransactionsGetRequest(
                 access_token=access_token,
                 start_date=today.replace(day=1),
@@ -165,7 +167,9 @@ def get_info():
         return jsonify(error_response)
 
     for bucket in buckets['spending']:
-        local_transactions = [t for t in transactions if bucket['name'] in t['category']]
+        local_transactions = [t for t in
+                              transactions if bucket['name'] in t['category']]
+
         bucket['currAmount'] = 0
         bucket['transactions'] = []
 
@@ -177,8 +181,6 @@ def get_info():
 
     with open('categories', 'w') as handle:
         handle.write(str(client.categories_get({})['categories']))
-
-    # pretty_print_response(response)
 
     return jsonify(response)
 
