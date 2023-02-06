@@ -99,8 +99,8 @@ try:
         buckets = json.load(handle)
         buckets = buckets['buckets']
 except FileNotFoundError:
-    buckets = {"spending": [{"name": "Travel", "type": "spending",
-                    "maxAmount": 100.00, "currAmount": 56.50,
+    buckets = {"spending": [{"name": "Other", "type": "spending",
+                    "maxAmount": 0.00, "currAmount": 0.00,
                     "transactions": []}]}
 
 
@@ -165,7 +165,7 @@ def get_info():
         return jsonify(error_response)
 
     for bucket in buckets['spending']:
-        local_transactions = [t for t in transactions if t['category'] == bucket['name']]
+        local_transactions = [t for t in transactions if bucket['name'] in t['category']]
         bucket['currAmount'] = 0
         bucket['transactions'] = []
 
@@ -175,7 +175,10 @@ def get_info():
 
     response['buckets'] = buckets
 
-    pretty_print_response(response)
+    with open('categories', 'w') as handle:
+        handle.write(str(client.categories_get({})['categories']))
+
+    # pretty_print_response(response)
 
     return jsonify(response)
 
