@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'buckets.dart';
 import 'transactions.dart';
 import 'balances.dart';
@@ -14,6 +15,7 @@ class _HomePageState extends State<HomePage> {
     // here, put a future for the pages using
     // backend/get_all_info
     // Future<void> _info /// get all info, set parameters to be passed to other pages
+    late Future<void> _info;
     int _pageIndex = 0;
     static const List<Widget> _pages = <Widget>[
         BucketWidget(type: "spending"),
@@ -24,6 +26,18 @@ class _HomePageState extends State<HomePage> {
     @override
     void initState() {
         super.initState();
+
+        _info = getInfoFromBackend();
+    }
+
+    Future<void> getInfoFromBackend() async {
+        final backendInfo = await http.get(
+            Uri.parse(
+                'http://localhost:9090/budget/get_all_info'
+            )
+        );
+
+        // set all info for various pieces of application
     }
 
     void _itemPressed(int index) {
