@@ -1,3 +1,4 @@
+import 'package:budget_frontend/transactions.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -7,16 +8,13 @@ just another name for saving/spending categories
 */
 
 List<Bucket> parseBuckets(String response, String type) {
-    print(response);
     final Map<String, dynamic> json = jsonDecode(response);
 
-    var bucketsJson = json['buckets'];
+    var bucketsJson = json['buckets'][type];
     List<Bucket> buckets = <Bucket>[];
 
     bucketsJson.forEach( (var bucket) => {
-        if (bucket['type'] == type) {
-            buckets.add(Bucket.fromJson(bucket))
-        }
+        buckets.add(Bucket.fromJson(bucket))
         });
 
     return buckets;
@@ -58,28 +56,30 @@ class Bucket {
     String type;
     double currAmount;
     double maxAmount;
+    List<Transaction> transactions;
 
-    Bucket(this.name, this.type, this.currAmount, this.maxAmount);
+    Bucket(this.name, this.type, this.currAmount, this.maxAmount, this.transactions);
 
     factory Bucket.fromJson(Map<String, dynamic> json) {
 
         if (json['type'] == 'spending') {
-            return SpendingBucket(json['name'], json['currAmount'], json['maxAmount']);
+            return SpendingBucket(json['name'], json['currAmount'], json['maxAmount'], parseTransactions(json['transactions']));
         }
         if (json['type'] == 'savings') {
-            return SavingsBucket(json['name'], json['currAmount'], json['maxAmount']);
+            return SavingsBucket(json['name'], json['currAmount'], json['maxAmount'], parseTransactions(json['transactions']));
         }
         return Bucket("Unknown",
         'unknown',
         0.00,
-        0.00
+        0.00,
+        <Transaction>[]
         );
     }
 }
 
 class SavingsBucket extends Bucket {
-    SavingsBucket(String name, double current, double goal)
-    : super(name, "savings", current, goal);
+    SavingsBucket(String name, double current, double goal, List<Transaction> transactions)
+    : super(name, "savings", current, goal, transactions);
 
     static void redistribute(SavingsBucket source, SavingsBucket dest, double transferAmt) {
         source.currAmount -= transferAmt;
@@ -88,81 +88,100 @@ class SavingsBucket extends Bucket {
 }
 
 class SpendingBucket extends Bucket{
-    SpendingBucket(String name, double amount, double max)
-    : super(name, "spending", amount, max);
+    SpendingBucket(String name, double amount, double max, List<Transaction> transactions)
+    : super(name, "spending", amount, max, transactions);
+}
+
+class DetailedBucketWidget extends StatelessWidget {
+    final Bucket bucket;
+
+    const DetailedBucketWidget({super.key, required this.bucket});
+
+    @override
+    Widget build(BuildContext context) {
+        return Column(
+            children: [
+                Text(bucket.name),
+                LinearProgressIndicator(
+                    value: bucket.currAmount / bucket.maxAmount,
+                    color: Colors.purple,
+                    backgroundColor: Colors.purple.withAlpha(50),
+                ),
+                ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: bucket.transactions.length+1,
+                    itemBuilder: (context, i) {
+                        if (i.isOdd) {
+                            return const Divider();
+                        }
+
+                        final index = i~/2;
+                        Transaction t = bucket.transactions[index];
+                        return ListTile(
+                            title: Text(
+                              "${t.name}    ${t.date}    ${t.amount}  ${t.categories[0]}"
+                            )
+                        );
+                    }
+                )
+            ],
+        );
+    }
 }
 
 class BucketWidget extends StatefulWidget {
-    final String type;
+    final List<Bucket> buckets;
 
     // a type is required when initializing a bucket widget (spending or savings)
-    const BucketWidget({super.key, required this.type});
+    const BucketWidget({super.key, required this.buckets});
 
     @override
     State<BucketWidget> createState() => _BucketWidgetState();
 }
 
 class _BucketWidgetState extends State<BucketWidget> {
-    late Future<List<Bucket>> _bucketFuture;
-    List<Bucket> _buckets = <Bucket>[];
 
     @override
     void initState() {
         super.initState();
-
-        _bucketFuture = getBuckets();
-
     }
 
-    Future<List<Bucket>> getBuckets() async {
-        final response = await http.get(
-            Uri.parse('http://localhost:9090/budget/get_buckets')
+    void _goToDetailedView(BuildContext context, Bucket bucket) {
+        Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (BuildContext context) => Scaffold(
+                body: Center(
+                    child: DetailedBucketWidget(bucket: bucket)
+                )
+            )
+            )
         );
-
-        return parseBuckets(response.body, widget.type);
     }
 
     @override
     Widget build(BuildContext context) {
-        return FutureBuilder(
-            future: _bucketFuture,
-            builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                    _buckets = snapshot.data!;
-
-                    return ListView.builder(
-                        padding: const EdgeInsets.all(16.0),
-                        itemCount: _buckets.length+1,
-                        itemBuilder: (context, i) {
-                            if (i.isOdd) {
-                                return const Divider();
-                            }
-
-                            final index = i ~/ 2;
-
-                            Bucket b = _buckets[index];
-                            return ListTile(
-                                title: Text(b.name),
-                                trailing: CircularProgressIndicator(
-                                    value: b.currAmount / b.maxAmount,
-                                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.purple),
-                                )
-                                /*
-                                subtitle: LinearProgressIndicator(
-                                    value: b.currAmount / b.maxAmount,
-                                    color: Colors.purple,
-                                    backgroundColor: Colors.purple.withAlpha(50),
-                                )
-                                */
-
-                            );
-                        }
-                    );
+        return ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: widget.buckets.length+1,
+            itemBuilder: (context, i) {
+                if (i.isOdd) {
+                    return const Divider();
                 }
-                else if (snapshot.hasError) {
-                    return Text('${snapshot.error}');
-                }
-                return const CircularProgressIndicator();
+
+                final index = i~/2;
+
+                Bucket b = widget.buckets[index];
+                return ListTile(
+                    title: Hero(
+                        tag: 'bucket-transition',
+                        child: Text(b.name)
+                    ),
+                    subtitle: LinearProgressIndicator(
+                        value: b.currAmount / b.maxAmount,
+                        color: Colors.purple,
+                        backgroundColor: Colors.purple.withAlpha(50)
+                    ),
+                    onTap: () => _goToDetailedView(context, b)
+                );
             }
         );
     }

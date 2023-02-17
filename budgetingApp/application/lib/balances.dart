@@ -25,11 +25,12 @@ class Balance {
 List<Balance> parseBalances(String response) {
     final Map<String, dynamic> parsed = jsonDecode(response);
 
-    var jsonBalances = parsed['accounts'];
+    var jsonBalances = parsed['balances']['accounts'];
     List<Balance> balances = <Balance>[];
 
-    jsonBalances.forEach( (var bal) =>
+    jsonBalances.forEach( (var bal) => {
         balances.add(Balance.fromJson(bal))
+    }
     );
 
     return balances;
