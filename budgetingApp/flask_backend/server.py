@@ -100,8 +100,13 @@ try:
         buckets = buckets['buckets']
 except FileNotFoundError:
     buckets = {"spending": [{"name": "Other", "type": "spending",
-                             "maxAmount": 0.00, "currAmount": 0.00,
-                             "transactions": []}]}
+                             "maxAmount": 1.00, "currAmount": 0.00,
+                             "transactions": []}],
+               "savings": [{"name": "General", "type": "savings",
+                            "maxAmount": 1.00, "currAmount": 0.00,
+                            "transactions": []
+                            }]
+               }
 
 
 # function to write bucket objects to file
