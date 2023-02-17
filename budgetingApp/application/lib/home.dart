@@ -16,7 +16,10 @@ class _HomePageState extends State<HomePage> {
     // backend/get_all_info
     // Future<void> _info /// get all info, set parameters to be passed to other pages
     late Future<void> _info;
+    late BucketWidget _buckets;
+    late BalanceWidget _balances;
     int _pageIndex = 0;
+
     static const List<Widget> _pages = <Widget>[
         BucketWidget(type: "spending"),
         TransactionTable(),
@@ -37,7 +40,17 @@ class _HomePageState extends State<HomePage> {
             )
         );
 
-        // set all info for various pieces of application
+        List<Balance> balances = parseBalances(backendInfo.body);
+
+        List<Bucket> spending = parseBuckets(backendInfo.body, 'spending');
+
+        List<Bucket> savings = parseBuckets(backendInfo.body, 'savings');
+
+        // make new widge for spending buckets
+
+        // make new widget for savings buckets
+
+        // make new widget for account balances
     }
 
     void _itemPressed(int index) {
