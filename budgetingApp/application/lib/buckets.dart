@@ -108,15 +108,11 @@ class DetailedBucketWidget extends StatelessWidget {
                     backgroundColor: Colors.purple.withAlpha(50),
                 ),
                 ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: bucket.transactions.length+1,
+                    scrollDirection: Axis.vertical,
+                    shrinkWrap: true,
+                    itemCount: bucket.transactions.length,
                     itemBuilder: (context, i) {
-                        if (i.isOdd) {
-                            return const Divider();
-                        }
-
-                        final index = i~/2;
-                        Transaction t = bucket.transactions[index];
+                        Transaction t = bucket.transactions[i];
                         return ListTile(
                             title: Text(
                               "${t.name}    ${t.date}    ${t.amount}  ${t.categories[0]}"

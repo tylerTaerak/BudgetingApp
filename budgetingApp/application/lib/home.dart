@@ -34,12 +34,14 @@ class _HomePageState extends State<HomePage> {
 
     void _onSuccessCallback(String publicToken, LinkSuccessMetadata metadata) async {
       print("Link Success!");
-      print(publicToken);
-
       // make short notice saying the user has added an account
       // now that we have a public key, we can exchange it for an access token
 
-      await exchangePubKey(publicToken);
+      exchangePubKey(publicToken).then(
+        (data){
+            _infoFuture = getInfoFromBackend();
+        }
+      );
     }
 
     void _onEventCallback(String event, LinkEventMetadata metadata) {
@@ -70,17 +72,20 @@ class _HomePageState extends State<HomePage> {
             )
         );
 
-        List<Balance> balances = parseBalances(backendInfo.body);
-        List<Bucket> spending = parseBuckets(backendInfo.body, 'spending');
-        List<Bucket> savings = parseBuckets(backendInfo.body, 'savings');
+        if (backendInfo.statusCode == 200){
+            List<Balance> balances = parseBalances(backendInfo.body);
+            List<Bucket> spending = parseBuckets(backendInfo.body, 'spending');
+            List<Bucket> savings = parseBuckets(backendInfo.body, 'savings');
 
-        setState(() {
-                  _pages = [
+            setState(() {
+                    _pages = [
                     BucketWidget(buckets: spending),
                     BucketWidget(buckets: savings),
                     BalanceWidget(balances: balances)
-                  ];
-                });
+                    ];
+                    });
+        }
+
     }
 
     void _itemPressed(int index) {
