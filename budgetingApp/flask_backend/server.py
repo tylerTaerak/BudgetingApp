@@ -87,7 +87,9 @@ for product in PLAID_PRODUCTS:
 # Use local persistent storage to store access_tokens
 try:
     with open('./.access_token', 'r') as handle:
-        access_token = handle.read()
+        access_token = []
+        for line in handle:
+            access_token.append(line)
 except FileNotFoundError:
     access_token = None
 
@@ -146,26 +148,30 @@ def get_info():
         # get transactions for the current month
         today = datetime.date.today()
 
-        transactions = TransactionsGetRequest(
-                access_token=access_token,
-                start_date=today.replace(day=1),
-                end_date=today,
-                options=TransactionsGetRequestOptions(
-                    include_personal_finance_category=True
+        response['transactions'] = []
+        response['balances'] = {}
+        for token in access_token:
+            # do transaction request stuff with Plaid API
+            transactions = TransactionsGetRequest(
+                    access_token=token,
+                    start_date=today.replace(day=1),
+                    end_date=today,
+                    options=TransactionsGetRequestOptions(
+                        include_personal_finance_category=True
+                        )
                     )
-                )
-        transactions = client.transactions_get(transactions).to_dict()
-        response['transactions'] = transactions['transactions']
-        transactions = transactions['transactions']
-        response['transactions'] = transactions
+            transactions = client.transactions_get(transactions).to_dict()
+            response['transactions'] += transactions['transactions']
 
-        # do balance request stuff with Plaid API
-        balanceRequest = AccountsBalanceGetRequest(
-                access_token=access_token
-                )
+            # do balance request stuff with Plaid API
+            balanceRequest = AccountsBalanceGetRequest(
+                    access_token=token
+                    )
 
-        balances = client.accounts_balance_get(balanceRequest)
-        response['balances'] = balances.to_dict()
+            balances = client.accounts_balance_get(balanceRequest)
+            response['balances'] = balances.to_dict().update(
+                    response['balances']
+                    )
 
     except plaid.ApiException as e:
         error_response = format_error(e)
@@ -173,7 +179,8 @@ def get_info():
 
     for bucket in buckets['spending']:
         local_transactions = [t for t in
-                              transactions if bucket['name'] in t['category']]
+                              response['transactions']
+                              if bucket['name'] in t['category']]
 
         bucket['currAmount'] = 0
         bucket['transactions'] = []
@@ -188,68 +195,6 @@ def get_info():
         handle.write(str(client.categories_get({})['categories']))
 
     return jsonify(response)
-
-
-"""
-<section>
-This section has all the primary functions used to interface with
-the Plaid API; will likely just be completely written out by utilizing
-a function that has all the information together instead of separating
-them
-"""
-
-
-# Retrieve Transactions for an Item
-# https://plaid.com/docs/#transactions
-@app.route('/budget/transactions', methods=['GET'])
-def get_transactions():
-    # Set cursor to empty to receive all historical updates
-    cursor = ''
-
-    # New transaction updates since "cursor"
-    added = []
-    modified = []
-    removed = []  # Removed transaction ids
-    has_more = True
-    try:
-        # Iterate through each page of new transaction updates for item
-        while has_more:
-            request = TransactionsSyncRequest(
-                access_token=access_token,
-                cursor=cursor,
-            )
-            response = client.transactions_sync(request).to_dict()
-            # Add this page of results
-            added.extend(response['added'])
-            modified.extend(response['modified'])
-            removed.extend(response['removed'])
-            has_more = response['has_more']
-            # Update cursor to the next cursor
-            cursor = response['next_cursor']
-
-        # Return the 8 most recent transactions
-        latest_transactions = sorted(added, key=lambda t: t['date'])[-300:]
-        return jsonify({
-            'latest_transactions': latest_transactions})
-
-    except plaid.ApiException as e:
-        error_response = format_error(e)
-        return jsonify(error_response)
-
-
-# Retrieve real-time balance data for each of an Item's accounts
-# https://plaid.com/docs/#balance
-@app.route('/budget/balances', methods=['GET'])
-def get_balance():
-    try:
-        request = AccountsBalanceGetRequest(
-            access_token=access_token
-        )
-        response = client.accounts_balance_get(request)
-        return jsonify(response.to_dict())
-    except plaid.ApiException as e:
-        error_response = format_error(e)
-        return jsonify(error_response)
 
 
 @app.route('/budget/add_bucket', methods=['POST'])
@@ -312,7 +257,7 @@ def get_access_token():
         exchange_request = ItemPublicTokenExchangeRequest(
             public_token=public_token)
         exchange_response = client.item_public_token_exchange(exchange_request)
-        access_token = exchange_response['access_token']
+        access_token.append(exchange_response['access_token'])
 
         # write newly retrieved access token to file
         with open("./.access_token", "w") as handle:

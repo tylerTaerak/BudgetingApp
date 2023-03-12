@@ -16,8 +16,8 @@ I need to take in order to complete the project.
 1. ~~Get Plaid Link launching and configured properly~~
 2. ~~Using link tokens, get checking and savings account info~~
 3. ~~Using link tokens, get credit info~~
-4. Develop system for buckets (for savings) and envelopes (for spending)
-5. Develop system to display statistics (work with Megan to decide what's useful)
+4. ~~Develop system for buckets (for savings) and envelopes (for spending)~~
+5. ~~Develop system to display statistics (work with Megan to decide what's useful)~~
 
 #### Using Development Mode
 
