@@ -169,9 +169,7 @@ def get_info():
                     )
 
             balances = client.accounts_balance_get(balanceRequest)
-            response['balances'] = balances.to_dict().update(
-                    response['balances']
-                    )
+            response['balances'] = balances.to_dict()
 
     except plaid.ApiException as e:
         error_response = format_error(e)
@@ -191,8 +189,9 @@ def get_info():
 
     response['buckets'] = buckets
 
+    categories = client.categories_get({})
     with open('categories', 'w') as handle:
-        handle.write(str(client.categories_get({})['categories']))
+        handle.write(json.dumps(categories.to_dict()))
 
     return jsonify(response)
 
@@ -261,7 +260,7 @@ def get_access_token():
 
         # write newly retrieved access token to file
         with open("./.access_token", "w") as handle:
-            handle.write(access_token)
+            handle.write("\n".join(access_token))
 
         item_id = exchange_response['item_id']
         return jsonify(exchange_response.to_dict())
