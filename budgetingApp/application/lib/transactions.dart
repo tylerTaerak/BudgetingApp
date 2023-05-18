@@ -27,9 +27,8 @@ class Transaction {
 List<Transaction> parseTransactions(List<dynamic> transactionsResp) {
     List<Transaction> transactions = <Transaction>[];
 
-    transactionsResp.forEach( (var tran) => {
+    transactionsResp.forEach( (var tran) =>
         transactions.add(Transaction.fromJson(tran))
-        }
     );
 
     return transactions;

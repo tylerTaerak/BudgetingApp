@@ -28,10 +28,14 @@ List<Balance> parseBalances(String response) {
     var jsonBalances = parsed['balances']['accounts'];
     List<Balance> balances = <Balance>[];
 
-    jsonBalances.forEach( (var bal) => {
-        balances.add(Balance.fromJson(bal))
+    if (jsonBalances == null)
+    {
+        return balances;
     }
-    );
+
+    jsonBalances.forEach((var bal) => {
+        balances.add(Balance.fromJson(bal))
+    });
 
     return balances;
 }
@@ -58,6 +62,10 @@ class _BalanceWidgetState extends State<BalanceWidget> {
             padding: const EdgeInsets.all(16.0),
             itemCount: widget.balances.length+1,
             itemBuilder: (context, i) {
+                if (widget.balances.isEmpty)
+                {
+                    return const Text("Try adding some accounts!");
+                }
               if (i.isOdd) return const Divider();
 
               final index = i ~/ 2;

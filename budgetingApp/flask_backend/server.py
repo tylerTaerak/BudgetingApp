@@ -17,6 +17,8 @@ import datetime
 import plaid
 import os
 import json
+import yaml
+from yaml import Loader
 import time
 from dotenv import load_dotenv
 load_dotenv()
@@ -109,6 +111,9 @@ except FileNotFoundError:
                             "transactions": []
                             }]
                }
+
+with open('./spendingCategories.yaml', 'r') as handle:
+    categories = yaml.load(handle, Loader=Loader)
 
 
 # function to write bucket objects to file
@@ -205,6 +210,22 @@ def add_bucket(request):
 def get_buckets():
     bucketJson = {'buckets': buckets}
     return jsonify(bucketJson)
+
+
+@app.route('/budget/categories', methods=['GET'])
+def get_categories():
+    catResponse = {}
+
+    for key in categories.keys():
+        if categories[key]['Primary Name'] is None:
+            for subKey in categories[key]:
+                if subKey == 'Primary Name':
+                    continue
+                catResponse[subKey] = categories[key][subKey]
+        else:
+            catResponse[key] = categories[key]['Primary Name']
+
+    return jsonify(catResponse)
 
 
 """

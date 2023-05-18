@@ -13,6 +13,11 @@ List<Bucket> parseBuckets(String response, String type) {
     var bucketsJson = json['buckets'][type];
     List<Bucket> buckets = <Bucket>[];
 
+    if (bucketsJson == null)
+    {
+        return buckets;
+    }
+
     bucketsJson.forEach( (var bucket) => {
         buckets.add(Bucket.fromJson(bucket))
         });
@@ -179,6 +184,72 @@ class _BucketWidgetState extends State<BucketWidget> {
                     onTap: () => _goToDetailedView(context, b)
                 );
             }
+        );
+    }
+}
+
+class NewBucketForm extends StatefulWidget
+{
+    final String type;
+    const NewBucketForm({super.key, required this.type});
+
+    @override
+    State<NewBucketForm> createState() => _NewBucketFormState();
+}
+
+class _NewBucketFormState extends State<NewBucketForm>
+{
+    final _formKey = GlobalKey<FormState>();
+
+    @override
+    Widget build(BuildContext context) {
+        // Navigator will take care of back button
+        if (widget.type == "savings")
+        {
+            return Form(
+                    key: _formKey,
+                    child: Column(
+                        children: <Widget>[
+                        TextFormField(
+                            // form for bucket name
+                            autofocus: true,
+                            validator: (value){
+                            return null;
+                            },
+                            ),
+                        TextFormField(
+                            // form for bucket goal/max amount
+                            validator: (value){
+                            return null;
+                            },
+                            ),
+                        ElevatedButton(
+                            // submit form
+                            onPressed: () {
+                            },
+                            child: const Text("Create New Bucket")
+                            )
+                        ]
+                    )
+                );
+        }
+        return Form(
+            key: _formKey,
+            child: Column(
+                children: <Widget>[
+                TextFormField(
+                    // form for name (should utilize drop-down menu
+                ),
+                TextFormField(
+                    // form for budget amount
+                ),
+                ElevatedButton(
+                    onPressed: () {
+                    },
+                    child: const Text("Create New Bucket")
+                )
+                ]
+            )
         );
     }
 }

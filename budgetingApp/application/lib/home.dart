@@ -88,6 +88,19 @@ class _HomePageState extends State<HomePage> {
 
     }
 
+    Widget _actionButton() {
+        if (_pageIndex != 2)
+        {
+            return FloatingActionButton(
+                    onPressed: (){
+                        // do stuff to add bucket
+                    },
+                    child: const Icon(Icons.add)
+                    );
+        }
+        return Container();
+    }
+
     void _itemPressed(int index) {
         setState(() {
             _pageIndex = index;
@@ -129,25 +142,20 @@ class _HomePageState extends State<HomePage> {
                       }
                       ),
                 ),
-                floatingActionButton: FloatingActionButton(
-                    onPressed: (){
-                        // do stuff to add bucket
-                    },
-                    child: const Icon(Icons.add)
-                    ),
+                floatingActionButton: _actionButton(),
                 bottomNavigationBar: BottomNavigationBar(
                     items: const <BottomNavigationBarItem>[
                         BottomNavigationBarItem(
+                            icon: Icon(Icons.fastfood),
+                            label: 'Spending'
+                        ),
+                        BottomNavigationBarItem(
                             icon: Icon(Icons.home),
-                            label: 'Home'
+                            label: 'Savings'
                         ),
                         BottomNavigationBarItem(
                             icon: Icon(Icons.money),
-                            label: 'Transactions'
-                        ),
-                        BottomNavigationBarItem(
-                            icon: Icon(Icons.link),
-                            label: 'Link Accounts'
+                            label: 'Accounts'
                         )
                     ],
                     currentIndex: _pageIndex,
