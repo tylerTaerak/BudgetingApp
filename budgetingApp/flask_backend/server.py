@@ -202,8 +202,15 @@ def get_info():
 
 
 @app.route('/budget/add_bucket', methods=['POST'])
-def add_bucket(request):
-    buckets['type'].append(request.body)
+def add_bucket():
+    try:
+        data = request.get_json()
+        buckets[data['type']].append(request.get_json())
+        response = {'Success': 'true'}
+    except Exception as e:
+        response = {'Success': 'false', 'Error': e}
+    finally:
+        return response
 
 
 @app.route('/budget/get_buckets', methods=['GET'])

@@ -192,6 +192,19 @@ class NewBucketForm extends StatefulWidget
 {
     final String type;
     const NewBucketForm({super.key, required this.type});
+    static List<String> categories = <String>[];
+
+    static Future<void> setCategories() async {
+        final categoryInfo = await http.get(
+            Uri.parse(
+                'http://localhost:9090/budget/categories'
+            )
+        );
+
+        Map<String, dynamic> categoryMap = jsonDecode(categoryInfo.body);
+
+        NewBucketForm.categories = categoryMap.entries.map((entry) => entry.value.toString()).toList();
+    }
 
     @override
     State<NewBucketForm> createState() => _NewBucketFormState();
@@ -200,56 +213,67 @@ class NewBucketForm extends StatefulWidget
 class _NewBucketFormState extends State<NewBucketForm>
 {
     final _formKey = GlobalKey<FormState>();
+    String currentSelection = NewBucketForm.categories.first;
+    double maxAmount = 0.0;
 
     @override
     Widget build(BuildContext context) {
         // Navigator will take care of back button
-        if (widget.type == "savings")
-        {
-            return Form(
-                    key: _formKey,
-                    child: Column(
-                        children: <Widget>[
-                        TextFormField(
-                            // form for bucket name
-                            autofocus: true,
-                            validator: (value){
-                            return null;
-                            },
-                            ),
-                        TextFormField(
-                            // form for bucket goal/max amount
-                            validator: (value){
-                            return null;
-                            },
-                            ),
-                        ElevatedButton(
-                            // submit form
-                            onPressed: () {
-                            },
-                            child: const Text("Create New Bucket")
-                            )
-                        ]
-                    )
-                );
-        }
         return Form(
-            key: _formKey,
-            child: Column(
-                children: <Widget>[
-                TextFormField(
-                    // form for name (should utilize drop-down menu
-                ),
-                TextFormField(
-                    // form for budget amount
-                ),
-                ElevatedButton(
-                    onPressed: () {
-                    },
-                    child: const Text("Create New Bucket")
+                key: _formKey,
+                child: Column(
+                    children: <Widget>[
+                    DropdownButtonFormField(
+                        value: currentSelection,
+                        items: NewBucketForm.categories.map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem(
+                                value: value,
+                                child: Text(value)
+                            );
+                        }).toList(),
+                        onChanged: (String? value) {
+                            setState(() {
+                                currentSelection = value!;
+                            });
+                        }
+                    ),
+                    TextFormField(
+                        // form for bucket goal/max amount
+                        keyboardType: TextInputType.number,
+                        onChanged: (String? value) {
+                            setState(() {
+                                maxAmount = double.tryParse(value!) ?? maxAmount;
+                            });
+                        },
+                        validator: (String? value) {
+                            if (value == null || maxAmount == 0) {
+                                return "invalid amount";
+                            }
+                            return null;
+                        },
+                        ),
+                    ElevatedButton(
+                        // submit form
+                        onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                                http.post(
+                                        Uri.parse('http://localhost:9090/budget/add_bucket'),
+                                        headers: <String, String> {
+                                        'Content-Type': 'application/json; charset=UTF-8'
+                                        },
+                                        body: jsonEncode(<String, String>{
+                                                  "name": currentSelection,
+                                                  "type": widget.type,
+                                                  "maxAmount": maxAmount.toString(),
+                                                  "currAmount": "0.0"
+                                      }));
+                                Navigator.pop(context);
+                            }
+                        },
+                        child: const Text("Create New Bucket")
+                        )
+                    ]
                 )
-                ]
-            )
-        );
+            );
     }
 }

@@ -26,6 +26,7 @@ class _HomePageState extends State<HomePage> {
         super.initState();
 
         _infoFuture = getInfoFromBackend();
+        NewBucketForm.setCategories();
 
         PlaidLink.onSuccess(_onSuccessCallback);
         PlaidLink.onEvent(_onEventCallback);
@@ -93,7 +94,21 @@ class _HomePageState extends State<HomePage> {
         {
             return FloatingActionButton(
                     onPressed: (){
+                        String bucketType;
+                        if (_pageIndex == 0) {
+                            bucketType = "spending";
+                        } else {
+                            bucketType = "savings";
+                        }
                         // do stuff to add bucket
+                        Navigator.of(context).push(MaterialPageRoute<void>(
+                            builder: (BuildContext context) => Scaffold(
+                                body: Center(
+                                    child: NewBucketForm(type: bucketType),
+                                )
+                            )
+                            )
+                        );
                     },
                     child: const Icon(Icons.add)
                     );
